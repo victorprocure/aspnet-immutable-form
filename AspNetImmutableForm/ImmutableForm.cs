@@ -16,12 +16,10 @@ public class ImmutableForm<TFormModel> : ComponentBase
     private TFormModel? _initialValues;
 
     public ImmutableForm()
-    {
-        _handleSubmitDelegate = HandleSubmitAsync;
-    }
+        => _handleSubmitDelegate = HandleSubmitAsync;
 
-#if NET5_0_OR_GREATER
-        [NotNullIfNotNull(nameof(_editContext))]
+#if NETSTANDARD2_1_OR_GREATER
+        [NotNull]
 #endif
     [Parameter]
     public TFormModel InitialValues { get => _initialValues ?? throw new InvalidOperationException($"{nameof(InitialValues)} cannot be null"); set => _initialValues = value; }
@@ -36,6 +34,9 @@ public class ImmutableForm<TFormModel> : ComponentBase
     [Parameter(CaptureUnmatchedValues = true)]
     public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
+#if NET5_0_OR_GREATER
+    [MemberNotNull(nameof(_editContext), nameof(_internalMutableModel))]
+#endif
     protected override void OnParametersSet()
     {
         if (OnSubmit.HasDelegate && (OnValidSubmit.HasDelegate || OnInvalidSubmit.HasDelegate))
@@ -44,10 +45,10 @@ public class ImmutableForm<TFormModel> : ComponentBase
                 $"{nameof(ImmutableForm<TFormModel>)}, do not also supply {nameof(OnValidSubmit)} or {nameof(OnInvalidSubmit)}.");
         }
 
-        if (_editContext?.Model is not TFormModel)
+        if (_editContext is null || _internalMutableModel is null || _editContext.Model is not TFormModel)
         {
-            _internalMutableModel = InitialValues.DeepCopy();
-            _editContext = new EditContext(_internalMutableModel!);
+            _internalMutableModel = InitialValues.DeepCopy()!;
+            _editContext = new EditContext(_internalMutableModel);
         }
     }
 
